@@ -6,49 +6,43 @@
 @Date    ：2022/4/6 15:06 
 '''
 
-import dask.array as dask
-import numpy as np
-import zarr
-from dask.diagnostics import ProgressBar
-from parameters import (windowSize, path)
 
-class starfmFusionModel:
-    def __init__(self):
 
-        pass
+import os
+from Spatiotemporal.Entity.RSData import RSData
+from ..STARFM.processing import Processing
 
-    ''' '''
-    def partitoin(self, image, folder):
-        #对array进行分块and填充
-        imageDask = dask.from_array(image, chunks = (windowSize, image.shape[1]))
-        imagePad = dask.pad(imageDask, windowSize//2, mode="constant")
 
-        for i in range(windowSize):
-            row = str(i)
-            block_i = imagePad[i:,:]  #i-n行，所有列
-            block_iDask = dask.rechunk(block_i, chunks = (windowSize, imagePad.shape[1]))
-            block_iDask.map_blocks(self.__blockToRow, dtype = int, row = row, folder = folder).compute()
+
+
+class StarfmFusionModel:
+    def __init__(self, pathFineResT0, pathCoarseResT0, pathCoarseResT1):
+        self.pathFineResT0 = pathFineResT0
+        self.pathCoarseResT0 = pathCoarseResT0
+        self.pathCoarseResT1 = pathCoarseResT1
 
         pass
 
-    '''将 数据块 展开'''
-    def __blockToRow(self, array, row, folder, blockId=None):
-        if array.shape[0] == windowSize:
-            nameString = str(blockId[0] + 1)
-            m,n = array.shape
-            u = m + 1 - windowSize
-            v = n + 1 - windowSize
+    def start(self):
+        # 存储临时数据的文件夹
+        pathTemFineResT0 = "Temporary/Tiles_fineRes_t0/"
+        pathTemCoarseResT0 = "Temporary/Tiles_coarseRes_t0/"
+        pathTemCoarseResT1 = "Temporary/Tiles_coarseRes_t1/"
 
-            # 开始的的索引
-            startIndices = np.arange(u)[:, None]*n + np.arange(v)
+        print("开始初始化数据")
+        '''初始化数据'''
+        # Landsat-like  time=T0
+        #pathFineResT0 = "sim_Landsat_t1.tif"
+        fineResT0 = RSData().readTIF(self.pathFineResT0)
+        # Modis-like  time=T0
+        #pathCoarseResT0 = "sim_MODIS_t1.tif"
+        coarseResT0 = RSData().readTIF(self.pathCoarseResT0)
+        # Modis-like  time=T1
+        pathCoarseResT1 = "sim_MODIS_t4.tif"
+        coarseResT1 = RSData().readTIF(self.pathCoarseResT1)
 
-            #获得偏移量索引
-            offsetIndices = np.arange(windowSize)[:, None]*n + np.array(windowSize)
-
-            #获得所有的索引并输入、
-            flatArray = np.take(array, startIndices.ravel()[:, None] + offsetIndices.ravel())
-
-            #以.zarr格式存储
-            fileName = path + folder + nameString + 'r' + row + '.zarr'
-            zarr.save(fileName, flatArray)
-        pass
+        print("开始分块并建立索引")
+        '''分块并建立索引'''
+        partitionFineResT0 = Processing().partitoin(fineResT0, pathTemFineResT0)
+        partitionCoarseResT0 = Processing().partitoin(coarseResT0, pathTemCoarseResT0)
+        partitionCoarseResT1 = Processing().partitoin(coarseResT1, pathTemCoarseResT1)

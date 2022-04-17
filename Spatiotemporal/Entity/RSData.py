@@ -24,6 +24,8 @@ class RSData:
         '''打开波段x'''
         self.rsdata = gdal.Open(self.pathRSImg)
         self.in_band = self.rsdata.GetRasterBand(1)
+        in_data = self.in_band.ReadAsArray(0)
+        return in_data
         pass
 
 

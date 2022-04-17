@@ -6,28 +6,31 @@
 @Date    ：2022/4/13 16:37 
 '''
 
-import Entity.RSData as RSImg
 import os
+from Model.STARFM.starfmFusion import StarfmFusionModel
+
 
 
 
 if __name__ == "__main__":
-    #根目录
-    os.chdir(r"E:\code\python\geoprocessing\Spatiotemporal\Tests\Test_4")
+    #影像根目录
+    os.chdir(r"E:\code\python\geoprocessing\Spatiotemporal\Tests\Test_3")
+    #影像名称
+    pathFineResT0 = "sim_Landsat_t1.tif"
+    pathCoarseResT0 = "sim_MODIS_t1.tif"
+    pathCoarseResT1 = "sim_MODIS_t4.tif"
 
-    '''初始化数据'''
-    #Landsat-like  time=T0
-    pathFineResT0 = "L72000306_SZ_B432_30m.tif"
-    fineResT0 = RSImg.RSData()
-    fineResT0.readTIF(pathFineResT0)
-    #Modis-like  time=T0
-    pathCoarseResT0 = "MOD09_2000306_SZ_B214_250m.tif"
-    coarseResT0 = RSImg.RSData()
-    coarseResT0.readTIF(pathCoarseResT0)
-    #Modis-like  time=T1
-    pathCoarseResT1 = "MOD09_2002311_SZ_B214_250m.tif"
-    coarseResT1 = RSImg.RSData()
-    coarseResT0.readTIF(pathCoarseResT1)
+    #初始化starfm模型并开始计算
+    starFM = StarfmFusionModel(pathFineResT0, pathCoarseResT0, pathCoarseResT1)
+    starFM.start()
+
+
+
+
+
+
+
+
 
 
 
