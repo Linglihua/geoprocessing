@@ -29,6 +29,7 @@ class StarfmFusionModel:
         pathTemCoarseResT0 = "Temporary/Tiles_coarseRes_t0/"
         pathTemCoarseResT1 = "Temporary/Tiles_coarseRes_t1/"
 
+
         print("开始初始化数据")
         '''初始化数据'''
         # Landsat-like  time=T0
@@ -41,8 +42,15 @@ class StarfmFusionModel:
         pathCoarseResT1 = "sim_MODIS_t4.tif"
         coarseResT1 = RSData().readTIF(self.pathCoarseResT1)
 
+        fineT0Processing = Processing(pathTemFineResT0) #参数为临时存储数据的位置
+        coarseT0Processing = Processing(pathTemCoarseResT0)
+        coarseT1Processing = Processing(pathTemCoarseResT1)
         print("开始分块并建立索引")
         '''分块并建立索引'''
-        partitionFineResT0 = Processing().partitoin(fineResT0, pathTemFineResT0)
-        partitionCoarseResT0 = Processing().partitoin(coarseResT0, pathTemCoarseResT0)
-        partitionCoarseResT1 = Processing().partitoin(coarseResT1, pathTemCoarseResT1)
+        partitionFineResT0 = fineT0Processing.partitoin(fineResT0)
+        partitionCoarseResT0 = coarseT0Processing.partitoin(coarseResT0)
+        partitionCoarseResT1 = coarseT1Processing.partitoin(coarseResT1)
+
+        print('读取移动窗口索引数据')
+        '''读取移动窗口索引数据'''
+        patchFineResT0 = fineT0Processing.daskBlockStack(fineResT0.shape)

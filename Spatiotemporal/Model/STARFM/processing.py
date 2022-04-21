@@ -10,15 +10,15 @@ import dask.array as dask
 import numpy as np
 import zarr
 from dask.diagnostics import ProgressBar
-from ..STARFM.parameters import (windowSize, path)
+from Spatiotemporal.Model.STARFM.parameters import (windowSize, path)
 
 class Processing:
-    def __init__(self):
-
+    def __init__(self, folder):
+        self.folder = folder
         pass
 
-    ''' '''
-    def partitoin(self, image, folder):
+    '''影像按照窗口进行边界拓展和分割'''
+    def partitoin(self, image):
         #对array进行分块and填充
         imageDask = dask.from_array(image, chunks = (windowSize, image.shape[1])) #按照windowSize大小按列分
         imagePad = dask.pad(imageDask, windowSize//2, mode="constant") #对边缘进行填充
@@ -29,12 +29,30 @@ class Processing:
             print(i)
             block_i = imagePad[i:,:]  #i-n行，所有列
             block_iDask = dask.rechunk(block_i, chunks = (windowSize, imagePad.shape[1]))
-            block_iDask.map_blocks(self.__blockToRow, dtype = int, row = row, folder = folder).compute()
+            block_iDask.map_blocks(self.__blockToRow, dtype = int, row = row).compute()
 
         pass
 
+    ''' '''
+    def daskBlockStack(self, shape):
+        daskLisk = []
+        fullPath = path + self.folder
+
+        maxBlockNum = shape[0]//windowSize + 1
+        for block in range(1, maxBlockNum + 1):
+            for row in range(0, windowSize):
+                name = str(block) + 'r' + str(row)
+                fullName = fullPath + name + '.zarr'
+                try:
+                    daskArray = dask.from_zarr(fullName)
+                    daskLisk.append(daskArray)
+                except Exception:
+                    continue
+        return dask.rechunk(dask.concatenate(daskLisk, axis=0), chunks=(shape[1], windowSize**2))
+
+
     '''将 数据块 展开   获取索引值'''
-    def __blockToRow(self, array, row, folder, block_id=None):
+    def __blockToRow(self, array, row, block_id=None):
         if array.shape[0] == windowSize:
             nameString = str(block_id[0] + 1)
             m,n = array.shape
@@ -54,8 +72,13 @@ class Processing:
             flatArray = np.take(array, startIndices.ravel()[:, None] + offsetIndices.ravel())
 
             #以.zarr格式存储
-            fileName = path + folder + nameString + 'r' + row + '.zarr'
+            fileName = path + self.folder + nameString + 'r' + row + '.zarr'
             zarr.save(fileName, flatArray)
 
         return array
         pass
+
+
+if __name__ == '__main__':
+    process = Processing('Temporary/Tiles_fineRes_t0/')
+    process.daskBlockStack( [150,150])
